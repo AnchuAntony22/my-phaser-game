@@ -2,24 +2,21 @@ export class Game extends Phaser.Scene {
     constructor() {
         super({ key: 'Game' });
         
-        this.backgroundSpeed = 1; // Speed of background scrolling
+        //this.backgroundSpeed = 1; // Speed of background scrolling
         this.playerSpeed = 1; // Player upward speed
     }
 
     create() {
         // Initialize lives
         this.lives = 3;
-
-        this.input.on('pointerdown', this.handleMouseClick, this);
-
-        // Create the background images
-        this.background1 = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'background');
-        this.background1.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-
-        this.background2 = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2 - this.cameras.main.height, 'background');
-        this.background2.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-        console.log(this.background1.y, this.background2.y);
-
+         // Set the background size to 800x600
+         const bgWidth = 800;
+         const bgHeight = 600;
+ 
+         this.background1 = this.add.image(0, 0, 'background').setOrigin(0, 0).setDisplaySize(bgWidth, bgHeight);
+         this.background2 = this.add.image(0, bgHeight, 'background').setOrigin(0, 0).setDisplaySize(bgWidth, bgHeight);
+         this.scrollSpeed = 1; // Set scroll speed
+        
         // Create sound objects
         this.startSound = this.sound.add('start');
         this.gameOverSound = this.sound.add('gameOver');
@@ -31,6 +28,7 @@ export class Game extends Phaser.Scene {
         this.runningSound.play(); // Start playing running sound
         // Create the player sprite
         this.player = this.physics.add.sprite(this.cameras.main.width / 2, this.cameras.main.height - 50, 'player');
+
         this.player.setScale(2);
         
         // Create the walking/running animation
@@ -141,21 +139,28 @@ export class Game extends Phaser.Scene {
                 this.runningSound.stop();
             }
         }
-    
-        // Move the background down to create a scrolling effect
-        this.background1.y += this.backgroundSpeed;
-        this.background2.y += this.backgroundSpeed;
-    
-        // Reset backgrounds when they are off-screen
+        
+          // Update background positions
+        this.background1.y += this.scrollSpeed;
+        this.background2.y += this.scrollSpeed;
+
+        // Reset background1 if it goes off-screen
         if (this.background1.y >= this.cameras.main.height) {
             this.background1.y = this.background2.y - this.cameras.main.height;
         }
+
+        // Reset background2 if it goes off-screen
         if (this.background2.y >= this.cameras.main.height) {
             this.background2.y = this.background1.y - this.cameras.main.height;
         }
-    
-        console.log(`Background1 Y: ${this.background1.y}, Background2 Y: ${this.background2.y}`);
-    
+
+        // Optional: Check if backgrounds are within view
+        if (this.background1.y < 0 || this.background1.y > this.cameras.main.height) {
+            console.warn('Background1 is out of view');
+        }
+        if (this.background2.y < 0 || this.background2.y > this.cameras.main.height) {
+            console.warn('Background2 is out of view');
+        }
         // Prevent player from moving off-screen horizontally
         if (this.player.x < 0) this.player.x = 0;
         if (this.player.x > this.cameras.main.width) this.player.x = this.cameras.main.width;
@@ -242,6 +247,9 @@ export class Game extends Phaser.Scene {
         this.lives--; // Reduce lives by 1
         // Play biting sound when colliding with an obstacle
         this.bitingSound.play();
+        this.player.setTint(0xff0000); // Set tint to red
+        // Shake the camera on collision
+        this.cameras.main.shake(300, 0.01);
         // Remove one heart icon from the group
         const lastHeart = this.heartIcons.getChildren()[this.lives];
         if (lastHeart) {
@@ -255,6 +263,11 @@ export class Game extends Phaser.Scene {
         // Hide the message after 1.5 seconds
         this.time.delayedCall(1500, () => {
             this.hitMessage.visible = false;
+        }, [], this);
+        
+        // Reset the player tint back to normal after a short duration
+        this.time.delayedCall(200, () => {
+            this.player.clearTint(); // Remove the tint
         }, [], this);
 
         // Check if no lives are left
@@ -276,6 +289,9 @@ export class Game extends Phaser.Scene {
             // Reset player to starting position
             this.player.y = this.cameras.main.height - 50;
         }
+        // Clear obstacles on game over
+        this.obstacles.forEach(obstacle => obstacle.destroy());
+        this.obstacles.length = 0; // Clear the array
     }
     
     handleMouseClick(pointer) {
