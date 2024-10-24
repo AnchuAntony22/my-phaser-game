@@ -15,7 +15,7 @@ export class Game extends Phaser.Scene {
  
          this.background1 = this.add.image(0, 0, 'background').setOrigin(0, 0).setDisplaySize(bgWidth, bgHeight);
          this.background2 = this.add.image(0, bgHeight, 'background').setOrigin(0, 0).setDisplaySize(bgWidth, bgHeight);
-         this.scrollSpeed = 1; // Set scroll speed
+         this.scrollSpeed = 0.5; // Set scroll speed
         
         // Create sound objects
         this.startSound = this.sound.add('start');
@@ -87,7 +87,7 @@ export class Game extends Phaser.Scene {
 
         // Obstacle spawner
         this.obstacleTimer = this.time.addEvent({
-            delay: 4000,
+            delay: 3000,
             callback: this.spawnObstacle,
             callbackScope: this,
             loop: true
@@ -168,7 +168,7 @@ export class Game extends Phaser.Scene {
         // Check if the player has reached the top of the screen
         if (this.player.y < 0) {
             this.player.y = this.cameras.main.height - 50; // Reset to bottom
-            this.obstacleSpeed += 0.5; // Increase obstacle speed as difficulty increases
+            this.obstacleSpeed += 0.1; // Increase obstacle speed as difficulty increases
         }
     
         // Manage obstacles
