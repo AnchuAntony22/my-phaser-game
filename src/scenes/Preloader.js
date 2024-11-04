@@ -24,6 +24,7 @@ export class Preloader extends Phaser.Scene {
         this.load.audio('gameOver', 'src/assets/game_over.mp3'); 
         this.load.audio('running', 'src/assets/running_movements.mp3');  
         this.load.audio('biting', 'src/assets/body_hit_or_kick.mp3');  
+        this.load.audio('bonus', 'src/assets/body_hit_or_kick.mp3');
 
     
     }
