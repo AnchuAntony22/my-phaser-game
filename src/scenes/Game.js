@@ -3,7 +3,7 @@ export class Game extends Phaser.Scene {
         super({ key: 'Game' });
         
         this.lives = 3;
-        this.horizontalBoundary = 150;
+        this.horizontalBoundary = 200;
         this.topBoundary = 100;
         this.scrollSpeed = 0.5;
         this.obstacleSpeed = 1;
@@ -34,6 +34,10 @@ export class Game extends Phaser.Scene {
         this.setupInput();
         this.startObstacleSpawning();
         this.startMovementLoop();
+        this.game.canvas.addEventListener('click', () => {
+            this.game.canvas.focus();
+          });
+        
     }
 
     initializeBackgrounds() {
@@ -82,7 +86,7 @@ export class Game extends Phaser.Scene {
             this.heartIcons.add(heart);
         }
     
-        console.log("Creating heart icons with lives:", lives);
+       // console.log("Creating heart icons with lives:", lives);
     }
     
     
@@ -135,7 +139,7 @@ export class Game extends Phaser.Scene {
         // Create the chasing box, positioned below the player
         this.chasingBox = this.add.rectangle(this.player.x, this.player.y + 100, 50, 50, 0xff0000); // Positioned 100 pixels below the player
         this.physics.add.existing(this.chasingBox);
-        console.log(this.chasingBox);
+        //console.log(this.chasingBox);
         // Set initial properties for chasing box
         this.chasingBox.body.setImmovable(true);
         this.chasingBox.body.setAllowGravity(false);
@@ -143,20 +147,15 @@ export class Game extends Phaser.Scene {
     }
     
     setupEventListeners() {
-        // Add the click event listener to ensure the canvas has focus
-        window.addEventListener('click', () => {
-            // Use this.sys.game.canvas to reference the canvas
-            this.sys.game.canvas.focus(); // Ensure the canvas has focus
-        });
+        this.input.on('pointerdown', (pointer) => this.handleMouseClick(pointer));
     }
+    
     
     setupInput() {
-        // Add keyboard controls for player movement
         this.cursors = this.input.keyboard.createCursorKeys();
-    
-        // Add mouse input for clicking
-        this.input.on('pointer', () => this.handleMouseClick());
+        this.input.on('pointerdown', this.handleMouseClick, this);
     }
+
     startObstacleSpawning() {
         // Create a timer or event to spawn obstacles at regular intervals
         this.obstacleTimer = this.time.addEvent({
@@ -214,24 +213,47 @@ export class Game extends Phaser.Scene {
     handlePlayerHitObstacle(player, obstacle) {
         if (this.gameOver) return;
     
-        this.lives--; 
-        this.updateHeartIcons(); // Update heart icons after losing a life
-        this.hitMessage.setText('Ouch!');
-        if (this.bitingSound) this.bitingSound.play();
+        // this.lives--; 
+        // this.updateHeartIcons(); // Update heart icons after losing a life
+        // this.hitMessage.setText('Ouch!');
+        // if (this.bitingSound) this.bitingSound.play();
     
-        this.hitMessage.setVisible(true);
-        this.time.addEvent({ delay: 1000, callback: () => this.hitMessage.setVisible(false), callbackScope: this });
-        this.cameras.main.shake(300, 0.01);
+        // this.hitMessage.setVisible(true);
+        // this.time.addEvent({ delay: 1000, callback: () => this.hitMessage.setVisible(false), callbackScope: this });
+        // this.cameras.main.shake(300, 0.01);
         
-        if (this.lives > 0) {
-            this.player.y = this.bottomBoundary;
-            this.time.delayedCall(200, () => this.player.clearTint(), [], this);
-        } else {
-            this.endGame();
+        // if (this.lives > 0) {
+        //     this.player.y = this.bottomBoundary;
+        //     this.time.delayedCall(200, () => this.player.clearTint(), [], this);
+        // } else {
+        //     this.endGame();
+        // }
+        
+        // obstacle.destroy();
+        // Check for collision with the chasing box instead
+        if (this.physics.overlap(this.player, this.chasingBox)) {
+            this.lives--;
+            this.updateHeartIcons(); // Update heart icons after losing a life
+            this.hitMessage.setText('Ouch!');
+            if (this.bitingSound) this.bitingSound.play();
+    
+            this.hitMessage.setVisible(true);
+            this.time.addEvent({ delay: 1000, callback: () => this.hitMessage.setVisible(false), callbackScope: this });
+            this.cameras.main.shake(300, 0.01);
+    
+            if (this.lives > 0) {
+                this.player.y = this.bottomBoundary;
+                this.time.delayedCall(200, () => this.player.clearTint(), [], this);
+            } else {
+                this.endGame();
+            }
         }
-        
+  
+        // Destroy obstacle as usual
         obstacle.destroy();
     }
+        
+    
     startMovementLoop() {
         // Only start the movement loop if the game is not over
         if (!this.gameOver) {
@@ -261,18 +283,50 @@ export class Game extends Phaser.Scene {
     }
     
     handlePlayerMovement() {
-        if (this.cursors.left.isDown && this.player.x > this.horizontalBoundary) {
-            this.player.setVelocityX(-this.playerSpeed);
-        } else if (this.cursors.right.isDown && this.player.x < this.cameras.main.width - this.horizontalBoundary) {
-            this.player.setVelocityX(this.playerSpeed);
+        //console.log("Player Movement Update");
+    
+        // Get the mouse position on click
+        const mouseX = this.input.activePointer.x;
+        const mouseY = this.input.activePointer.y;
+    
+        // Create a hint text variable to display the instructions
+        let hintText = '';
+    
+        // Horizontal movement: move left if mouse clicked on the left side of the screen, move right otherwise
+        if (this.input.activePointer.isDown) {
+            if (mouseX < this.cameras.main.width / 2 && this.player.x > this.horizontalBoundary) {
+                this.player.setVelocityX(-this.playerSpeed); // Move left
+                hintText = "Click Left to Move Left";  // Show hint for left movement
+                //console.log("Moving Left");
+            } else if (mouseX >= this.cameras.main.width / 2 && this.player.x < this.cameras.main.width - this.horizontalBoundary) {
+                this.player.setVelocityX(this.playerSpeed); // Move right
+                hintText = "Click Right to Move Right"; // Show hint for right movement
+                //console.log("Moving Right");
+            }
         } else {
-            this.player.setVelocityX(0); // Stops horizontal movement when no key is pressed
+            this.player.setVelocityX(0); // Stops horizontal movement when no mouse click
+            hintText = "Click on the left or right to move"; // General instruction when no click
         }
     
-        if (this.cursors.up.isDown && this.player.body.touching.down) {
-            this.player.setVelocityY(-this.playerJumpSpeed);
+        // Jumping: check if the player clicks anywhere for jumping
+        if (this.input.activePointer.isDown && this.player.body.touching.down) {
+            this.player.setVelocityY(-this.playerJumpSpeed); // Jump
+            //console.log("Jumping");
         }
-    
+        // Restrict horizontal movement to stay within boundaries
+        if (this.player.x < this.horizontalBoundary) {
+            this.player.x = this.horizontalBoundary; // Prevent player from going too far left
+        }
+        if (this.player.x > this.cameras.main.width - this.horizontalBoundary) {
+            this.player.x = this.cameras.main.width - this.horizontalBoundary; // Prevent player from going too far right
+        }
+        // Vertical Movement: Prevent the player from moving out of the screen vertically
+        if (this.player.y <= this.topBoundary) {
+            this.player.setVelocityY(0); // Prevent upward movement when reaching top boundary
+        }
+        if (this.player.y >= this.bottomBoundary) {
+            this.player.setVelocityY(0); // Prevent downward movement when reaching bottom boundary
+        }
         // Simulate forward movement
         this.player.y -= 0.5;
         if (this.player.y < 0) {
@@ -281,7 +335,27 @@ export class Game extends Phaser.Scene {
         if (this.gameOver) {
             return; // Stop movement updates if game over
         }
+    
+        // Display the hint text on the screen (if there's any hint)
+        this.displayHint(hintText);
     }
+    
+    // Function to display hint text on screen
+    displayHint(hintText) {
+        // Clear existing hint text
+        if (this.hintText) {
+            this.hintText.destroy();
+        }
+    
+        // Create a new text object to show the hint
+        this.hintText = this.add.text(this.cameras.main.centerX, 50, hintText, {
+            fontSize: '24px',
+            fill: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5);
+    }
+    
+    
     
     updateScore() {
         this.score += 1; // Increment score
@@ -350,7 +424,7 @@ export class Game extends Phaser.Scene {
                 let heart = this.add.image(30 + i * 40, 70, 'heart').setScale(0.5);
                 this.heartIcons.add(heart);
             }
-            console.log("Updating heart icons with lives:", this.lives);
+            //console.log("Updating heart icons with lives:", this.lives);
         }
     }
     
@@ -398,31 +472,37 @@ export class Game extends Phaser.Scene {
     }
     handlePlayerMovementOnClick(pointer) {
         if (this.gameOver) return;
-    
-        // Calculate the target X position based on the click location
+      
+        // Calculate target X based on click location
         const targetX = pointer.x;
-    
-        // Set the player's velocity to move towards the target X position
+      
+        // Set player velocity to move towards target
         this.player.setVelocityX((targetX - this.player.x) * this.playerSpeed);
-    
-        // Additionally, you can implement a time-based stopping mechanism:
-        this.time.delayedCall(200, () => {
-            this.player.setVelocityX(0); // Stop player movement after 200ms
-        }, [], this);
     }
     
     handleMouseClick(pointer) {
-        if (this.gameOver) return;
-      
-        console.log('Mouse clicked at: ', pointer.x, pointer.y);
-      
-        // Check if the mouse click is within the jump zone (adjust y-axis as needed)
-        if (pointer.y < this.cameras.main.height / 2) {
-          this.player.setVelocityY(-this.playerSpeed); // Initiate Jump
-        } else {
-          // Handle click-based movement (not implemented in this code snippet)
-          this.handlePlayerMovementOnClick(pointer);
+        // Get the mouse click position relative to the game world
+        const mouseX = pointer.x;
+        const mouseY = pointer.y;
+    
+        //console.log(`Mouse clicked at: ${mouseX}, ${mouseY}`);
+    
+        // Check if the mouse click is to the left or right of the player
+        if (mouseX < this.player.x) {
+            // Move the player to the left
+            this.player.setVelocityX(-this.playerSpeed); // Move left
+        } else if (mouseX > this.player.x) {
+            // Move the player to the right
+            this.player.setVelocityX(this.playerSpeed); // Move right
+        }
+    
+        // Optionally: you can stop the player when the mouse is clicked but not moving left or right
+        if (mouseX === this.player.x) {
+            this.player.setVelocityX(0); // Stop the player if clicked in the same X position
         }
     }
+    
+    
+    
 
 }
